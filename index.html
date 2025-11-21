@@ -1,0 +1,90 @@
+!doctype html
+html lang=en
+head
+meta charset=utf-8
+meta name=viewport content=width=device-width,initial-scale=1
+titleFor You — One Day Of Ustitle
+style
+  root{--bg#fff6f0;--card#ffffff;--accent#ff6b81;--muted#6b6b6b}
+  body{margin0;font-familysystem-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial;backgroundlinear-gradient(180deg,var(--bg),#fff);color#222}
+  .wrap{max-width900px;margin40px auto;padding20px}
+  header{displayflex;align-itemscenter;gap16px}
+  .badge{width72px;height72px;border-radius14px;backgroundlinear-gradient(135deg,#ffd1dc,#ff9fb8);displayflex;align-itemscenter;justify-contentcenter;font-weight700;color#520018}
+  h1{font-size28px;margin0}
+  p.lead{colorvar(--muted);margin-top6px}
+  .card{backgroundvar(--card);border-radius12px;padding18px;margin-top18px;box-shadow0 6px 18px rgba(0,0,0,0.06)}
+  .stories{displaygrid;grid-template-columnsrepeat(auto-fit,minmax(220px,1fr));gap12px}
+  .story h3{margin0 0 6px 0}
+  .photos{displayflex;gap8px;flex-wrapwrap;margin-top12px}
+  .photos img{widthcalc(33.333% - 8px);border-radius8px}
+  .reveal{displayflex;gap10px;align-itemscenter;margin-top12px}
+  .btn{backgroundvar(--accent);color#fff;padding10px 14px;border-radius10px;border0;cursorpointer}
+  .secret{displaynone;margin-top12px;padding12px;border-radius10px;background#fff0f3;color#520018;font-weight600}
+  footer{margin-top20px;colorvar(--muted);font-size13px;text-aligncenter}
+  @media(max-width520px){.photos img{widthcalc(50% - 8px)}}
+style
+head
+body
+div class=wrap
+  header
+    div class=badgeUSdiv
+    div
+      h1One Day Of Ush1
+      p class=leadA little site of stories, photos and a tiny surprise — built just for you today.p
+    div
+  header
+
+  section class=card
+    h2Our Storyh2
+    div class=stories
+      div class=story
+        h3How We Meth3
+        pThat accidental coffee line conversation that lasted three hours and changed our plans forever.p
+      div
+      div class=story
+        h3First Adventureh3
+        pLost on purpose in a town, found the best little bakery and each other, and laughed till sunset.p
+      div
+      div class=story
+        h3Everyday Magich3
+        pSmall rituals late-night playlists, silly nicknames, and the way you always steal the blanket.p
+      div
+    div
+  section
+
+  section class=card
+    h2Photosh2
+    div class=photos
+      img src=httpsvia.placeholder.com400x400text=Photo+1 alt=photo1
+      img src=httpsvia.placeholder.com400x400text=Photo+2 alt=photo2
+      img src=httpsvia.placeholder.com400x400text=Photo+3 alt=photo3
+    div
+  section
+
+  section class=card
+    h2Play our tuneh2
+    p class=leadPress play for our song.p
+    audio controls src=audio
+  section
+
+  section class=card
+    h2Secret Surpriseh2
+    p class=leadClick the button three times to reveal.p
+    div class=reveal
+      button id=btn class=btnClick mebutton
+      span id=count0  3span
+    div
+    div id=secret class=secretYou are my favorite everything. See you tonight ♥div
+  section
+
+  footer
+    This page will only be live for a short while — made with care.
+  footer
+div
+
+script
+  let c=0; const btn=document.getElementById('btn'), count=document.getElementById('count'), secret=document.getElementById('secret');
+  btn.addEventListener('click',()={ c++; count.textContent = c+'  3'; if(c=3){ secret.style.display='block'; btn.disabled=true; btn.textContent='Opened' }});
+script
+body
+html
