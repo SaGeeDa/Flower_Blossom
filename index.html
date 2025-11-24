@@ -1,90 +1,90 @@
-!doctype html
-html lang=en
-head
-meta charset=utf-8
-meta name=viewport content=width=device-width,initial-scale=1
-titleFor You — One Day Of Ustitle
-style
-  root{--bg#fff6f0;--card#ffffff;--accent#ff6b81;--muted#6b6b6b}
-  body{margin0;font-familysystem-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial;backgroundlinear-gradient(180deg,var(--bg),#fff);color#222}
-  .wrap{max-width900px;margin40px auto;padding20px}
-  header{displayflex;align-itemscenter;gap16px}
-  .badge{width72px;height72px;border-radius14px;backgroundlinear-gradient(135deg,#ffd1dc,#ff9fb8);displayflex;align-itemscenter;justify-contentcenter;font-weight700;color#520018}
-  h1{font-size28px;margin0}
-  p.lead{colorvar(--muted);margin-top6px}
-  .card{backgroundvar(--card);border-radius12px;padding18px;margin-top18px;box-shadow0 6px 18px rgba(0,0,0,0.06)}
-  .stories{displaygrid;grid-template-columnsrepeat(auto-fit,minmax(220px,1fr));gap12px}
-  .story h3{margin0 0 6px 0}
-  .photos{displayflex;gap8px;flex-wrapwrap;margin-top12px}
-  .photos img{widthcalc(33.333% - 8px);border-radius8px}
-  .reveal{displayflex;gap10px;align-itemscenter;margin-top12px}
-  .btn{backgroundvar(--accent);color#fff;padding10px 14px;border-radius10px;border0;cursorpointer}
-  .secret{displaynone;margin-top12px;padding12px;border-radius10px;background#fff0f3;color#520018;font-weight600}
-  footer{margin-top20px;colorvar(--muted);font-size13px;text-aligncenter}
-  @media(max-width520px){.photos img{widthcalc(50% - 8px)}}
-style
-head
-body
-div class=wrap
-  header
-    div class=badgeUSdiv
-    div
-      h1One Day Of Ush1
-      p class=leadA little site of stories, photos and a tiny surprise — built just for you today.p
-    div
-  header
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>For You — A Day of Us</title>
+  <style>
+    :root{--bg:#fff8f6;--card:#fff;--accent:#ff6b81;--muted:#666}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg),#fff);color:#222}
+    .wrap{max-width:900px;margin:36px auto;padding:18px}
+    header{display:flex;gap:14px;align-items:center}
+    .logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#ffd1dc,#ff9fb8);display:flex;align-items:center;justify-content:center;font-weight:700;color:#520018}
+    h1{font-size:26px;margin:0}
+    p.lead{color:var(--muted);margin:6px 0 0 0}
+    .card{background:var(--card);border-radius:12px;padding:16px;margin-top:16px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    .stories{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .story h3{margin:0 0 6px 0}
+    .photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .photos img{width:calc(33.333% - 8px);border-radius:8px;object-fit:cover}
+    .reveal{display:flex;gap:10px;align-items:center;margin-top:12px}
+    .btn{background:var(--accent);color:#fff;padding:10px 14px;border-radius:10px;border:0;cursor:pointer}
+    .secret{display:none;margin-top:12px;padding:12px;border-radius:10px;background:#fff0f3;color:#520018;font-weight:600}
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+    @media(max-width:520px){.photos img{width:calc(50% - 8px)}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">US</div>
+      <div>
+        <h1>One Day Of Us</h1>
+        <p class="lead">A tiny site of stories, photos and a surprise — just for today.</p>
+      </div>
+    </header>
 
-  section class=card
-    h2Our Storyh2
-    div class=stories
-      div class=story
-        h3How We Meth3
-        pThat accidental coffee line conversation that lasted three hours and changed our plans forever.p
-      div
-      div class=story
-        h3First Adventureh3
-        pLost on purpose in a town, found the best little bakery and each other, and laughed till sunset.p
-      div
-      div class=story
-        h3Everyday Magich3
-        pSmall rituals late-night playlists, silly nicknames, and the way you always steal the blanket.p
-      div
-    div
-  section
+    <section class="card">
+      <h2>Our Story</h2>
+      <div class="stories">
+        <div class="story">
+          <h3>How We Met</h3>
+          <p>That coffee line that turned into three hours and a lifetime of jokes.</p>
+        </div>
+        <div class="story">
+          <h3>First Trip</h3>
+          <p>We got lost, found a bakery, and decided getting lost together is our thing.</p>
+        </div>
+        <div class="story">
+          <h3>Little Things</h3>
+          <p>Late playlists, secret nicknames, and the way you make ordinary days glow.</p>
+        </div>
+      </div>
+    </section>
 
-  section class=card
-    h2Photosh2
-    div class=photos
-      img src=httpsvia.placeholder.com400x400text=Photo+1 alt=photo1
-      img src=httpsvia.placeholder.com400x400text=Photo+2 alt=photo2
-      img src=httpsvia.placeholder.com400x400text=Photo+3 alt=photo3
-    div
-  section
+    <section class="card">
+      <h2>Photos</h2>
+      <div class="photos">
+        <img src="https://via.placeholder.com/400?text=Photo+1" alt="photo1">
+        <img src="https://via.placeholder.com/400?text=Photo+2" alt="photo2">
+        <img src="https://via.placeholder.com/400?text=Photo+3" alt="photo3">
+      </div>
+    </section>
 
-  section class=card
-    h2Play our tuneh2
-    p class=leadPress play for our song.p
-    audio controls src=audio
-  section
+    <section class="card">
+      <h2>Play our tune</h2>
+      <p class="lead">Press play for our song.</p>
+      <audio controls src=""></audio>
+    </section>
 
-  section class=card
-    h2Secret Surpriseh2
-    p class=leadClick the button three times to reveal.p
-    div class=reveal
-      button id=btn class=btnClick mebutton
-      span id=count0  3span
-    div
-    div id=secret class=secretYou are my favorite everything. See you tonight ♥div
-  section
+    <section class="card">
+      <h2>Secret Surprise</h2>
+      <p class="lead">Click the button three times to reveal.</p>
+      <div class="reveal">
+        <button id="btn" class="btn">Click me</button>
+        <span id="count">0 / 3</span>
+      </div>
+      <div id="secret" class="secret">You are my favorite everything. See you tonight ♥</div>
+    </section>
 
-  footer
-    This page will only be live for a short while — made with care.
-  footer
-div
+    <footer>
+      This page is made with love. Remove it after 24 hours to keep it a sweet surprise.
+    </footer>
+  </div>
 
-script
-  let c=0; const btn=document.getElementById('btn'), count=document.getElementById('count'), secret=document.getElementById('secret');
-  btn.addEventListener('click',()={ c++; count.textContent = c+'  3'; if(c=3){ secret.style.display='block'; btn.disabled=true; btn.textContent='Opened' }});
-script
-body
-html
+  <script>
+    let c=0; const btn=document.getElementById('btn'), count=document.getElementById('count'), secret=document.getElementById('secret');
+    btn.addEventListener('click',()=>{ c++; count.textContent = c+' / 3'; if(c>=3){ secret.style.display='block'; btn.disabled=true; btn.textContent='Opened' }});
+  </script>
+</body>
+</html>
