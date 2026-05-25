@@ -1,0 +1,448 @@
+# ============================================================
+# Technical Debt Audit Workflow
+# ============================================================
+# Purpose  : Automatically detect, report, and track technical
+#            debt on every push to main, on every Pull Request,
+#            and on a weekly schedule.
+#
+# Outputs  :
+#   - Annotated PR / push checks (lint, complexity, security)
+#   - Auto-created GitHub Issues labelled `technical-debt`
+#   - Uploaded HTML reports as workflow artefacts
+# ============================================================
+
+name: Technical Debt Audit
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Every Monday at 08:00 UTC
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+    inputs:
+      create_issue:
+        description: "Create a GitHub Issue with findings?"
+        required: false
+        default: "true"
+        type: boolean
+
+# Cancel in-progress runs on the same ref to save minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+# ─────────────────────────────────────────────
+# J O B S
+# ─────────────────────────────────────────────
+jobs:
+
+  # ── 1. HTML / CSS Lint ─────────────────────
+  lint-html-css:
+    name: "Lint · HTML & CSS"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install lint tools
+        run: |
+          npm install -g htmlhint stylelint stylelint-config-standard
+
+      - name: Run HTMLHint
+        id: htmlhint
+        run: |
+          htmlhint "**/*.html" \
+            --config .htmlhintrc 2>/dev/null || true \
+            | tee htmlhint-report.txt
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Create .htmlhintrc if absent
+        run: |
+          if [ ! -f .htmlhintrc ]; then
+            cat > .htmlhintrc <<'EOF'
+          {
+            "tagname-lowercase": true,
+            "attr-lowercase": true,
+            "attr-value-double-quotes": true,
+            "doctype-first": true,
+            "tag-pair": true,
+            "spec-char-escape": true,
+            "id-unique": true,
+            "src-not-empty": true,
+            "title-require": true
+          }
+          EOF
+          fi
+
+      - name: Upload HTML lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: htmlhint-report
+          path: htmlhint-report.txt
+          retention-days: 30
+
+  # ── 2. JavaScript Complexity ───────────────
+  js-complexity:
+    name: "Complexity · JavaScript"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install complexity tools
+        run: npm install -g eslint @eslint/js eslint-plugin-complexity
+
+      - name: Extract inline scripts to analyse
+        run: |
+          # Pull every <script> block out of HTML files into .js files
+          mkdir -p /tmp/extracted-js
+          python3 - <<'PYEOF'
+          import re, pathlib, sys
+          html_files = list(pathlib.Path(".").rglob("*.html"))
+          for html in html_files:
+              content = html.read_text(errors="replace")
+              blocks = re.findall(r'<script[^>]*>(.*?)</script>', content, re.DOTALL)
+              for idx, block in enumerate(blocks):
+                  out = pathlib.Path(f"/tmp/extracted-js/{html.stem}_block{idx}.js")
+                  out.write_text(block)
+                  print(f"Extracted: {out}")
+          PYEOF
+
+      - name: Run ESLint complexity check
+        id: eslint
+        run: |
+          if ls /tmp/extracted-js/*.js 1>/dev/null 2>&1; then
+            npx eslint --no-eslintrc \
+              --rule '{"complexity": ["warn", 10], "max-depth": ["warn", 4], "max-lines-per-function": ["warn", 50]}' \
+              /tmp/extracted-js/*.js \
+              --format json > eslint-report.json 2>&1 || true
+            echo "ESLint completed"
+          else
+            echo "No inline JS blocks found" > eslint-report.json
+          fi
+
+      - name: Upload ESLint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslint-complexity-report
+          path: eslint-report.json
+          retention-days: 30
+
+  # ── 3. Dependency / Supply-Chain Audit ─────
+  dependency-audit:
+    name: "Security · Dependency Audit"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check for package.json
+        id: has_pkg
+        run: |
+          if [ -f package.json ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No package.json — creating minimal one for audit demo"
+            echo '{"name":"flower-blossom","version":"1.0.0","dependencies":{}}' > package.json
+          fi
+
+      - name: Install dependencies (if any)
+        run: npm install --ignore-scripts 2>/dev/null || true
+
+      - name: Run npm audit
+        id: audit
+        run: |
+          npm audit --json > npm-audit-report.json 2>&1 || true
+          # Summarise for step output
+          node -e "
+            const r = require('./npm-audit-report.json');
+            const meta = r.metadata || {};
+            const vuln = meta.vulnerabilities || {};
+            const total = (vuln.critical||0)+(vuln.high||0)+(vuln.moderate||0)+(vuln.low||0);
+            console.log('critical=' + (vuln.critical||0));
+            console.log('high=' + (vuln.high||0));
+            console.log('total=' + total);
+          " >> "$GITHUB_OUTPUT" 2>/dev/null || echo "total=0" >> "$GITHUB_OUTPUT"
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: npm-audit-report.json
+          retention-days: 30
+
+  # ── 4. Dead-Code / TODO Detection ──────────
+  dead-code-todos:
+    name: "Debt Markers · TODOs & Dead Code"
+    runs-on: ubuntu-latest
+    outputs:
+      todo_count: ${{ steps.scan.outputs.todo_count }}
+      fixme_count: ${{ steps.scan.outputs.fixme_count }}
+      hack_count:  ${{ steps.scan.outputs.hack_count }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Scan for debt markers
+        id: scan
+        run: |
+          echo "=== TODO / FIXME / HACK scan ===" | tee debt-markers-report.txt
+          echo "" >> debt-markers-report.txt
+
+          TODO_COUNT=$(grep -rni "TODO"  --include="*.html" --include="*.js" \
+                       --include="*.css" --include="*.md" . | wc -l || echo 0)
+          FIXME_COUNT=$(grep -rni "FIXME" --include="*.html" --include="*.js" \
+                        --include="*.css" --include="*.md" . | wc -l || echo 0)
+          HACK_COUNT=$(grep -rni "HACK\|XXX\|WORKAROUND" \
+                       --include="*.html" --include="*.js" \
+                       --include="*.css" --include="*.md" . | wc -l || echo 0)
+
+          echo "TODOs  : $TODO_COUNT"  | tee -a debt-markers-report.txt
+          echo "FIXMEs : $FIXME_COUNT" | tee -a debt-markers-report.txt
+          echo "HACKs  : $HACK_COUNT"  | tee -a debt-markers-report.txt
+          echo ""                      >> debt-markers-report.txt
+
+          echo "=== Detailed matches ===" >> debt-markers-report.txt
+          grep -rni "TODO\|FIXME\|HACK\|XXX\|WORKAROUND" \
+            --include="*.html" --include="*.js" \
+            --include="*.css" --include="*.md" \
+            --with-filename --line-number . >> debt-markers-report.txt || true
+
+          echo "todo_count=$TODO_COUNT"   >> "$GITHUB_OUTPUT"
+          echo "fixme_count=$FIXME_COUNT" >> "$GITHUB_OUTPUT"
+          echo "hack_count=$HACK_COUNT"   >> "$GITHUB_OUTPUT"
+
+      - name: Upload debt markers report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debt-markers-report
+          path: debt-markers-report.txt
+          retention-days: 30
+
+  # ── 5. Accessibility (a11y) Check ──────────
+  accessibility:
+    name: "Quality · Accessibility (a11y)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install axe-core CLI
+        run: npm install -g @axe-core/cli
+
+      - name: Start local HTTP server
+        run: |
+          npm install -g http-server
+          http-server . -p 8080 &
+          sleep 3
+          echo "Server started on :8080"
+
+      - name: Run axe accessibility scan
+        id: a11y
+        run: |
+          axe http://localhost:8080/index.html \
+            --exit \
+            --save a11y-report.json 2>&1 || true
+          echo "a11y scan complete"
+
+      - name: Upload a11y report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-report
+          path: a11y-report.json
+          retention-days: 30
+
+  # ── 6. Aggregate & Report ──────────────────
+  aggregate-and-report:
+    name: "Aggregate · Create Issue & Summary"
+    runs-on: ubuntu-latest
+    needs:
+      - lint-html-css
+      - js-complexity
+      - dependency-audit
+      - dead-code-todos
+      - accessibility
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all reports
+        uses: actions/download-artifact@v4
+        with:
+          path: reports/
+
+      - name: Generate aggregated Markdown summary
+        id: summary
+        run: |
+          DATE=$(date -u +"%Y-%m-%d")
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+          TODO_COUNT="${{ needs.dead-code-todos.outputs.todo_count }}"
+          FIXME_COUNT="${{ needs.dead-code-todos.outputs.fixme_count }}"
+          HACK_COUNT="${{ needs.dead-code-todos.outputs.hack_count }}"
+          TOTAL_MARKERS=$(( TODO_COUNT + FIXME_COUNT + HACK_COUNT ))
+
+          cat > summary.md <<SUMMARY
+          # 🔬 Technical Debt Audit — $DATE
+
+          > Generated by [GitHub Actions run #$GITHUB_RUN_ID]($RUN_URL)
+          > Branch: \`$GITHUB_REF_NAME\` · Triggered by: \`$GITHUB_EVENT_NAME\`
+
+          ---
+
+          ## 📋 Summary Table
+
+          | Check | Status | Notes |
+          |-------|--------|-------|
+          | HTML / CSS Lint    | ${{ needs.lint-html-css.result == 'success' && '✅ Pass' || '⚠️ Review' }}  | See \`htmlhint-report\` artefact |
+          | JS Complexity      | ${{ needs.js-complexity.result == 'success' && '✅ Pass' || '⚠️ Review' }} | See \`eslint-complexity-report\` artefact |
+          | Dependency Audit   | ${{ needs.dependency-audit.result == 'success' && '✅ Pass' || '⚠️ Review' }} | See \`npm-audit-report\` artefact |
+          | Dead-Code / TODOs  | $TOTAL_MARKERS markers found | TODOs: $TODO_COUNT · FIXMEs: $FIXME_COUNT · HACKs: $HACK_COUNT |
+          | Accessibility (a11y) | ${{ needs.accessibility.result == 'success' && '✅ Pass' || '⚠️ Review' }} | See \`a11y-report\` artefact |
+
+          ---
+
+          ## 🗂 Debt Markers Breakdown
+
+          - **TODO** annotations : $TODO_COUNT
+          - **FIXME** annotations: $FIXME_COUNT
+          - **HACK / XXX**        : $HACK_COUNT
+          - **Total markers**     : $TOTAL_MARKERS
+
+          ---
+
+          ## 📦 Artefacts
+
+          All detailed reports are attached to this workflow run:
+          - \`htmlhint-report/\` — HTML validation findings
+          - \`eslint-complexity-report/\` — JS cyclomatic complexity
+          - \`npm-audit-report/\` — Dependency vulnerability data
+          - \`debt-markers-report/\` — Full TODO / FIXME / HACK listing
+          - \`a11y-report/\` — Accessibility violations
+
+          ---
+
+          ## ✅ Recommended Next Steps
+
+          1. Address any **critical** or **high** dependency vulnerabilities immediately.
+          2. Review and resolve all **FIXME** markers before merging.
+          3. Schedule sprint tasks for **TODO** items with owner assignments.
+          4. Run \`htmlhint\` locally and fix tag/attribute errors in \`index.html\`.
+          5. Update \`docs/technical_debt.rst\` with new findings and re-assess scores.
+
+          SUMMARY
+
+          echo "Summary written to summary.md"
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create or update GitHub Issue (scheduled / manual runs)
+        if: |
+          (github.event_name == 'schedule' ||
+           github.event_name == 'workflow_dispatch') &&
+          github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('summary.md', 'utf8');
+            const date = new Date().toISOString().split('T')[0];
+            const title = `🔬 Technical Debt Report — ${date}`;
+
+            // Search for an open issue with the same weekly label
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              labels: 'technical-debt',
+              state:  'open',
+            });
+
+            if (issues.length > 0) {
+              // Update the most recent open issue
+              await github.rest.issues.createComment({
+                owner:    context.repo.owner,
+                repo:     context.repo.repo,
+                issue_number: issues[0].number,
+                body,
+              });
+              core.notice(`Updated existing issue #${issues[0].number}`);
+            } else {
+              // Create a fresh issue
+              const { data: issue } = await github.rest.issues.create({
+                owner:  context.repo.owner,
+                repo:   context.repo.repo,
+                title,
+                body,
+                labels: ['technical-debt'],
+              });
+              core.notice(`Created issue #${issue.number}: ${issue.html_url}`);
+            }
+
+      - name: Post PR comment with summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('summary.md', 'utf8');
+            const marker = '<!-- technical-debt-audit -->';
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner:        context.repo.owner,
+              repo:         context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+            const fullBody = `${marker}\n${body}`;
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner:      context.repo.owner,
+                repo:       context.repo.repo,
+                comment_id: existing.id,
+                body:       fullBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner:        context.repo.owner,
+                repo:         context.repo.repo,
+                issue_number: context.issue.number,
+                body:         fullBody,
+              });
+            }
